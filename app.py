@@ -752,8 +752,10 @@ Available tool kits: {', '.join(candidate_apps) if candidate_apps else 'auto'}""
                             limit=1000,
                         )
 
-                        results: list[Dict[str, Any]] = []
+                        # Score and rank tools by relevance
+                        raw_tools = []
                         print(f"🔎 SEARCH_TOOLS query='{query}' returned {len(fetched or [])} raw tools. Filtering...")
+                        
                         for t in fetched or []:
                             fn = t.get("function") or {}
                             slug = str(fn.get("name") or "")
@@ -768,19 +770,60 @@ Available tool kits: {', '.join(candidate_apps) if candidate_apps else 'auto'}""
                                 if not any(safe in slug_u for safe in ["LIST", "GET", "READ", "SEARCH", "FETCH"]):
                                     continue
                             
-                            # Don't filter by repo/email mode - trust Composio's search to be relevant
-
                             params_schema = fn.get("parameters") or {}
-                            results.append(
-                                {
-                                    "slug": slug,
-                                    "toolkit": infer_toolkit_slug(slug),
-                                    "description": fn.get("description") or "",
-                                    "required": list(params_schema.get("required") or []),
-                                }
-                            )
-                            if len(results) >= limit:
-                                break
+                            raw_tools.append({
+                                "slug": slug,
+                                "slug_u": slug_u,
+                                "toolkit": infer_toolkit_slug(slug),
+                                "description": fn.get("description") or "",
+                                "required": list(params_schema.get("required") or []),
+                            })
+                        
+                        # Debug: Print first 10 raw tools before ranking
+                        print(f"🔎 First 10 tools from Composio: {[t['slug'] for t in raw_tools[:10]]}")
+                        
+                        # Score tools based on query relevance
+                        def score_tool(tool: Dict[str, Any]) -> int:
+                            score = 0
+                            slug_u = tool["slug_u"]
+                            query_u = query.upper()
+                            
+                            # Exact keyword matches
+                            if "REPOSITORIES" in query_u or "REPO" in query_u:
+                                if "REPOSITORIES" in slug_u or "REPOS" in slug_u:
+                                    score += 100
+                                if "LIST" in slug_u:
+                                    score += 50
+                                if "AUTHENTICATED_USER" in slug_u or "FOR_THE_AUTHENTICATED_USER" in slug_u:
+                                    score += 50
+                                # Penalize unrelated repo tools
+                                if "INVITATION" in slug_u or "WEBHOOK" in slug_u or "DEPLOY" in slug_u:
+                                    score -= 100
+                            
+                            if "EMAIL" in query_u or "MESSAGE" in query_u or "INBOX" in query_u:
+                                if any(k in slug_u for k in ["EMAIL", "MESSAGE", "MAIL", "INBOX"]):
+                                    score += 100
+                                if "LIST" in slug_u or "FETCH" in slug_u:
+                                    score += 50
+                            
+                            # Prefer read-only actions
+                            if any(safe in slug_u for safe in ["LIST", "GET", "FETCH", "SEARCH", "READ"]):
+                                score += 30
+                            
+                            return score
+                        
+                        # Sort by relevance score
+                        ranked_tools = sorted(raw_tools, key=score_tool, reverse=True)
+                        
+                        # Take top results
+                        results = []
+                        for tool in ranked_tools[:limit]:
+                            results.append({
+                                "slug": tool["slug"],
+                                "toolkit": tool["toolkit"],
+                                "description": tool["description"],
+                                "required": tool["required"],
+                            })
                         
                         print(f"🔎 SEARCH_TOOLS filtered down to {len(results)} results.")
                         if results:
@@ -860,13 +903,19 @@ Available tool kits: {', '.join(candidate_apps) if candidate_apps else 'auto'}""
                         if not connected_account_id:
                             raise RuntimeError(f"No active connected account found for toolkit '{toolkit}'.")
 
-                        result = composio.tools.execute(
-                            slug=slug,
-                            arguments=arguments,
-                            user_id=entity_id,
-                            connected_account_id=connected_account_id,
-                            dangerously_skip_version_check=True,
-                        )
+                        print(f"🔧 EXECUTE_TOOL: slug={slug}, arguments={arguments}, entity_id={entity_id}, connected_account_id={connected_account_id}")
+                        
+                        try:
+                            result = composio.tools.execute(
+                                action=slug,  # SDK expects 'action' not 'slug'
+                                params=arguments,  # SDK expects 'params' not 'arguments'
+                                entity_id=entity_id,  # SDK expects 'entity_id' not 'user_id'
+                                connected_account_id=connected_account_id,
+                                dangerously_skip_version_check=True,
+                            )
+                        except Exception as exec_error:
+                            print(f"❌ EXECUTE_TOOL API Error: {str(exec_error)}")
+                            raise
                         if hasattr(result, "model_dump"):
                             result = result.model_dump()
                         elif hasattr(result, "dict"):
@@ -1174,4 +1223,4 @@ if os.path.exists(STATIC_DIR):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
