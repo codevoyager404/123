@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent MVP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --border: #2a2a3a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6a6a7a;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            gap: 16px;
+        }
+
+        .side-panel {
+            width: 400px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .header-btn:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* Chat area */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 16px;
+            line-height: 1.5;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--accent);
+            color: white;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+        }
+
+        .message.system {
+            align-self: center;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 13px;
+            padding: 8px 16px;
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .message a {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Progress indicator */
+        .progress-message {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            z-index: 1000;
+        }
+
+        .modal {
+            width: min(720px, 100%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            border-radius: 10px;
+            padding: 8px 10px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 18px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+            min-height: 140px;
+        }
+
+        .card h4 {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .app-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .app-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .app-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .app-key {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .btn {
+            border: none;
+            border-radius: 10px;
+            padding: 9px 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .empty {
+            color: var(--text-muted);
+            font-size: 13px;
+            padding: 8px 0;
+        }
+
+        @media (max-width: 860px) {
+            .side-panel { display: none; }
+            .modal-body { grid-template-columns: 1fr; }
+        }
+
+        /* Input area */
+        .input-area {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+        }
+
+        .input-area input {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: var(--text-primary);
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-area input:focus {
+            border-color: var(--accent);
+        }
+
+        .input-area button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .input-area button:hover {
+            background: var(--accent-hover);
+        }
+
+        .input-area button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Side panel - Terminal/Logs */
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-tabs {
+            display: flex;
+            gap: 4px;
+        }
+
+        .panel-tab {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .panel-tab.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .terminal {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            min-width: 70px;
+        }
+
+        .log-level {
+            min-width: 50px;
+            font-weight: 500;
+        }
+
+        .log-level.info { color: var(--accent); }
+        .log-level.success { color: var(--success); }
+        .log-level.error { color: var(--error); }
+        .log-level.warning { color: var(--warning); }
+
+        .log-message {
+            color: var(--text-secondary);
+            word-break: break-all;
+        }
+
+        .log-message.error {
+            color: var(--error);
+        }
+
+        /* Status bar */
+        .status-bar {
+            padding: 10px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .status-dot.error {
+            background: var(--error);
+        }
+
+        .status-dot.warning {
+            background: var(--warning);
+        }
+
+        /* Auth forms */
+        .auth-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .auth-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-title {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 15px;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent);
+        }
+
+        .auth-btn {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-secondary);
+        }
+
+        .auth-switch a {
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="auth-container">
+        <div class="auth-box">
+            <div id="login-form">
+                <h1 class="auth-title">Welcome back</h1>
+                <p class="auth-subtitle">Sign in to continue</p>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" placeholder="••••••••">
+                </div>
+                <button class="auth-btn" onclick="login()">Sign In</button>
+                <p class="auth-switch">Don't have an account? <a onclick="showRegister()">Register</a></p>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <h1 class="auth-title">Create account</h1>
+                <p class="auth-subtitle">Get started for free</p>
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="register-name" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="register-email" placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="register-password" placeholder="••••••••">
+                </div>
+                <button class="auth-btn" onclick="register()">Create Account</button>
+                <p class="auth-switch">Already have an account? <a onclick="showLogin()">Sign in</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="app-screen" class="container hidden">
+        <div class="main-panel">
+            <div class="header">
+                <div class="logo">AI Agent MVP</div>
+                <div class="user-info">
+                    <div class="header-actions">
+                        <button class="header-btn" onclick="openConnections()">Connections</button>
+                        <button class="header-btn" onclick="logout()">Logout</button>
+                    </div>
+                    <span id="user-name">User</span>
+                    <div class="user-avatar" id="user-avatar">U</div>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="messages" id="messages">
+                    <div class="message system">Send a message to start chatting with the AI agent</div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="message-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+                    <button id="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="panel-header">
+                <span class="panel-title">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9zM3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2z"/>
+                        <path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h12z"/>
+                    </svg>
+                    Terminal Logs
+                </span>
+                <div class="panel-tabs">
+                    <div class="panel-tab active" onclick="filterLogs('all')">All</div>
+                    <div class="panel-tab" onclick="filterLogs('error')">Errors</div>
+                </div>
+            </div>
+            <div class="terminal" id="terminal"></div>
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span id="status-text">Connected</span>
+                </div>
+                <span id="task-status">Ready</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connections Modal -->
+    <div class="modal-backdrop" id="connections-backdrop" onclick="backdropClose(event)">
+        <div class="modal" role="dialog" aria-modal="true" aria-label="Connections">
+            <div class="modal-header">
+                <div class="modal-title">Connections</div>
+                <button class="modal-close" onclick="closeConnections()">Close</button>
+            </div>
+            <div class="modal-body">
+                <div class="card">
+                    <h4>Connected</h4>
+                    <div id="connected-list" class="empty">Loading...</div>
+                </div>
+                <div class="card">
+                    <h4>Available Apps</h4>
+                    <div id="apps-list" class="empty">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let authToken = null;
+        let currentTaskId = null;
+        let eventSource = null;
+        let conversationHistory = [];
+        let logs = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('connected') === 'true') {
+                // Clean URL and open Connections.
+                window.history.replaceState({}, document.title, window.location.pathname);
+                setTimeout(() => openConnections(), 50);
+            }
+        });
+
+        // Auth functions
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/me', { credentials: 'include' });
+                if (res.ok) {
+                    currentUser = await res.json();
+                    showApp();
+                } else {
+                    showAuth();
+                }
+            } catch (e) {
+                showAuth();
+            }
+        }
+
+        function showAuth() {
+            document.getElementById('auth-screen').style.display = 'flex';
+            document.getElementById('app-screen').classList.add('hidden');
+        }
+
+        function showApp() {
+            document.getElementById('auth-screen').style.display = 'none';
+            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('user-name').textContent = currentUser.name;
+            document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+            addLog('info', `Logged in as ${currentUser.email}`);
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch {}
+            currentUser = null;
+            showAuth();
+        }
+
+        // Connections modal
+        function openConnections() {
+            const backdrop = document.getElementById('connections-backdrop');
+            backdrop.style.display = 'flex';
+            loadConnections();
+        }
+
+        function closeConnections() {
+            document.getElementById('connections-backdrop').style.display = 'none';
+        }
+
+        function backdropClose(e) {
+            if (e.target && e.target.id === 'connections-backdrop') closeConnections();
+        }
+
+        async function loadConnections() {
+            const connectedEl = document.getElementById('connected-list');
+            const appsEl = document.getElementById('apps-list');
+            connectedEl.textContent = 'Loading...';
+            appsEl.textContent = 'Loading...';
+
+            try {
+                const [appsRes, connRes] = await Promise.all([
+                    fetch('/api/apps', { credentials: 'include' }),
+                    fetch('/api/connections', { credentials: 'include' }),
+                ]);
+
+                const appsData = appsRes.ok ? await appsRes.json() : { apps: [] };
+                const connData = connRes.ok ? await connRes.json() : { connections: [] };
+
+                renderConnected(connData.connections || []);
+                renderApps(appsData.apps || []);
+            } catch (e) {
+                connectedEl.textContent = 'Failed to load.';
+                appsEl.textContent = 'Failed to load.';
+            }
+        }
+
+        function renderConnected(connections) {
+            const el = document.getElementById('connected-list');
+            if (!connections || connections.length === 0) {
+                el.className = 'empty';
+                el.textContent = 'No connected apps yet.';
+                return;
+            }
+            el.className = '';
+            el.innerHTML = connections.map(c => {
+                const key = (c.toolkit || c.integrationId || c.key || c.slug || 'unknown');
+                const name = (c.name || c.toolkit || c.integrationId || key);
+                return `
+                    <div class="app-row">
+                        <div class="app-meta">
+                            <div class="app-name">${escapeHtml(name)}</div>
+                            <div class="app-key">${escapeHtml(String(key))}</div>
+                        </div>
+                        <button class="btn" disabled>Connected</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderApps(apps) {
+            const el = document.getElementById('apps-list');
+            if (!apps || apps.length === 0) {
+                el.className = 'empty';
+                el.textContent = 'No apps returned.';
+                return;
+            }
+            el.className = '';
+            el.innerHTML = apps.map(a => {
+                const key = (a.key || a.slug || a.name || '').toLowerCase();
+                const name = a.name || a.key || 'App';
+                return `
+                    <div class="app-row">
+                        <div class="app-meta">
+                            <div class="app-name">${escapeHtml(name)}</div>
+                            <div class="app-key">${escapeHtml(key)}</div>
+                        </div>
+                        <button class="btn" onclick="connectApp('${escapeHtml(key)}')">Connect</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function connectApp(appKey) {
+            if (!appKey) return;
+            addLog('info', `Connecting ${appKey}...`);
+            try {
+                const res = await fetch(`/api/connections/${encodeURIComponent(appKey)}/connect`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Failed to create connection request');
+                if (!data.redirect_url) throw new Error('No redirect_url returned');
+                window.location.href = data.redirect_url;
+            } catch (e) {
+                addLog('error', e.message || 'Connection error');
+                alert(e.message || 'Connection error');
+            }
+        }
+
+        function showLogin() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                    credentials: 'include'
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = data.user;
+                    showApp();
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || 'Login failed');
+                }
+            } catch (e) {
+                alert('Connection error');
+            }
+        }
+
+        async function register() {
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name }),
+                    credentials: 'include'
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = data.user;
+                    showApp();
+                } else {
+                    const err = await res.json();
+                    alert(err.detail || 'Registration failed');
+                }
+            } catch (e) {
+                alert('Connection error');
+            }
+        }
+
+        // Chat functions
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            input.value = '';
+            addMessage('user', message);
+            addLog('info', `User: ${message.substring(0, 50)}...`);
+
+            document.getElementById('send-btn').disabled = true;
+            document.getElementById('task-status').textContent = 'Processing...';
+
+            try {
+                // Send message
+                const res = await fetch('/v1/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message,
+                        conversation_history: conversationHistory
+                    }),
+                    credentials: 'include'
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to send message');
+                }
+
+                const data = await res.json();
+                currentTaskId = data.task_id;
+                addLog('info', `Task created: ${currentTaskId}`);
+
+                // Show progress
+                addProgressMessage('Connecting to task stream...');
+
+                // Open SSE stream
+                openStream(currentTaskId);
+
+            } catch (e) {
+                addMessage('error', e.message);
+                addLog('error', e.message);
+                document.getElementById('send-btn').disabled = false;
+                document.getElementById('task-status').textContent = 'Error';
+                updateStatus('error');
+            }
+
+            // Update conversation history
+            conversationHistory.push({ role: 'user', content: message });
+        }
+
+        function openStream(taskId) {
+            if (eventSource) eventSource.close();
+
+            eventSource = new EventSource(`/v1/chat/stream?task_id=${taskId}`);
+
+            eventSource.onopen = () => {
+                addLog('success', 'SSE stream connected');
+                updateStatus('connected');
+            };
+
+            eventSource.onerror = (e) => {
+                addLog('error', 'SSE connection error - retrying...');
+                updateStatus('error');
+                // Will auto-reconnect
+            };
+
+            eventSource.addEventListener('status', (e) => {
+                const data = JSON.parse(e.data);
+                addLog('info', `Task status: ${data.status}`);
+                document.getElementById('task-status').textContent = data.status;
+            });
+
+            eventSource.addEventListener('progress', (e) => {
+                const data = JSON.parse(e.data);
+                updateProgressMessage(data.message || data.step);
+                addLog('info', `Progress: ${data.message || data.step}`);
+            });
+
+            eventSource.addEventListener('router', (e) => {
+                const data = JSON.parse(e.data);
+                addLog('info', `Router: intent="${data.output?.intent}", needs_tools=${data.output?.needs_tools}`);
+            });
+
+            eventSource.addEventListener('tools_selected', (e) => {
+                const data = JSON.parse(e.data);
+                const selected = (data.tools || []).join(', ');
+                addLog('info', `Tools selected: ${selected}`);
+                if (data.all_count) {
+                    const sample = (data.all_sample || []).join(', ');
+                    addLog('info', `All tools (${data.all_count}) sample: ${sample}`);
+                }
+            });
+
+            eventSource.addEventListener('tool_call', (e) => {
+                const data = JSON.parse(e.data);
+                const params = data.params ? JSON.stringify(data.params).slice(0, 500) : '';
+                addLog('warning', `Calling tool: ${data.tool}${params ? ' ' + params : ''}`);
+            });
+
+            eventSource.addEventListener('tool_result', (e) => {
+                const data = JSON.parse(e.data);
+                const label = data.tool || data.tool_call_id || 'tool';
+                const extra = (!data.success && data.error) ? ` (${data.error})` : '';
+                addLog(data.success ? 'success' : 'error', `Tool ${label}: ${data.success ? 'success' : 'failed'}${extra}`);
+                if (data.tool === 'SEARCH_TOOLS' && data.results) {
+                    addLog('info', `SEARCH_TOOLS results: ${(data.results || []).join(', ')}`);
+                    if (data.recommended) addLog('info', `SEARCH_TOOLS recommended: ${data.recommended}`);
+                }
+            });
+
+            eventSource.addEventListener('awaiting_confirm', (e) => {
+                const data = JSON.parse(e.data);
+                addLog('warning', 'Awaiting user confirmation');
+                removeProgressMessage();
+                addConfirmMessage(data);
+            });
+
+            eventSource.addEventListener('final', (e) => {
+                const data = JSON.parse(e.data);
+                removeProgressMessage();
+                if (data.needs_connection && data.links) {
+                    const items = Object.entries(data.links)
+                        .map(([k, url]) => url
+                            ? `<div><a href="${escapeHtml(url)}" target="_blank" rel="noopener">Connect ${escapeHtml(k)}</a></div>`
+                            : `<div>Connect ${escapeHtml(k)}: link unavailable</div>`
+                        )
+                        .join('');
+                    addMessageHtml('assistant', `<div>${escapeHtml(data.response || 'Needs connection.')}</div><div style="margin-top:10px">${items}</div>`);
+                } else {
+                    addMessage('assistant', data.response);
+                }
+                conversationHistory.push({ role: 'assistant', content: data.response || '' });
+                addLog('success', 'Response received');
+                document.getElementById('send-btn').disabled = false;
+                document.getElementById('task-status').textContent = 'Ready';
+                eventSource.close();
+            });
+
+            eventSource.addEventListener('error', (e) => {
+                const data = JSON.parse(e.data);
+                removeProgressMessage();
+                addMessage('error', data.message);
+                addLog('error', data.message);
+                document.getElementById('send-btn').disabled = false;
+                document.getElementById('task-status').textContent = 'Error';
+                updateStatus('error');
+                eventSource.close();
+            });
+
+            eventSource.addEventListener('expired', (e) => {
+                const data = JSON.parse(e.data);
+                removeProgressMessage();
+                addMessage('system', data.message);
+                addLog('warning', 'Task expired');
+                document.getElementById('send-btn').disabled = false;
+                eventSource.close();
+            });
+        }
+
+        // UI helpers
+        function addMessage(type, content) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.textContent = content;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addMessageHtml(type, html) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = html;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addProgressMessage(text) {
+            removeProgressMessage();
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'progress-message';
+            div.id = 'progress-msg';
+            div.innerHTML = `<div class="spinner"></div><span>${text}</span>`;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function updateProgressMessage(text) {
+            const el = document.getElementById('progress-msg');
+            if (el) {
+                el.querySelector('span').textContent = text;
+            } else {
+                addProgressMessage(text);
+            }
+        }
+
+        function removeProgressMessage() {
+            const el = document.getElementById('progress-msg');
+            if (el) el.remove();
+        }
+
+        function addConfirmMessage(data) {
+            const messages = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.innerHTML = `
+                <strong>⚠️ Confirmation Required</strong><br>
+                Action: ${data.intent}<br>
+                Apps: ${data.apps_involved?.join(', ')}<br>
+                Risk: ${data.risk_level}<br><br>
+                <button onclick="confirmTask(true, '${data.confirm_token}')" style="margin-right:10px;padding:8px 16px;background:#10b981;border:none;border-radius:6px;color:white;cursor:pointer">Approve</button>
+                <button onclick="confirmTask(false, '${data.confirm_token}')" style="padding:8px 16px;background:#ef4444;border:none;border-radius:6px;color:white;cursor:pointer">Deny</button>
+            `;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        async function confirmTask(approved, token) {
+            try {
+                const res = await fetch(`/v1/tasks/${currentTaskId}/confirm`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ approved, confirm_token: token }),
+                    credentials: 'include'
+                });
+
+                const data = await res.json();
+                addLog(approved ? 'success' : 'warning', `Task ${approved ? 'confirmed' : 'denied'}`);
+
+                if (approved) {
+                    addProgressMessage('Executing confirmed action...');
+                }
+            } catch (e) {
+                addLog('error', e.message);
+            }
+        }
+
+        // Terminal logs
+        function addLog(level, message) {
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            logs.push({ time, level, message });
+            renderLogs();
+        }
+
+        function renderLogs(filter = 'all') {
+            const terminal = document.getElementById('terminal');
+            const filtered = filter === 'all' ? logs : logs.filter(l => l.level === filter);
+
+            terminal.innerHTML = filtered.map(log => `
+                <div class="log-entry">
+                    <span class="log-time">${log.time}</span>
+                    <span class="log-level ${log.level}">${log.level.toUpperCase()}</span>
+                    <span class="log-message ${log.level}">${escapeHtml(log.message)}</span>
+                </div>
+            `).join('');
+
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function filterLogs(filter) {
+            document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderLogs(filter);
+        }
+
+        function updateStatus(status) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+
+            dot.className = 'status-dot';
+            if (status === 'error') {
+                dot.classList.add('error');
+                text.textContent = 'Error';
+            } else if (status === 'warning') {
+                dot.classList.add('warning');
+                text.textContent = 'Warning';
+            } else {
+                text.textContent = 'Connected';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
